@@ -1,0 +1,58 @@
+
+<form>
+  <input id="service" type="text" list="services" autofocus placeholder="Bluetooth Service">
+  <input id="characteristic" type="text" list="characteristics" placeholder="Optional Bluetooth Characteristic">
+  <button onclick="onButtonClick()">Get characteristics</button>
+</form>
+
+<script src="/src/js/main.js"></script>
+<script>
+  let terminalContainer = document.getElementById('terminal');
+  document.querySelector('form').addEventListener('submit', function(event) {
+    event.stopPropagation();
+    event.preventDefault();
+  });
+  function onButtonClick() {
+    console.log("washere")
+  let serviceUuid = document.querySelector('#service').value;
+  if (serviceUuid.startsWith('0x')) {
+    serviceUuid = parseInt(serviceUuid);
+  }
+
+  let characteristicUuid = document.querySelector('#characteristic').value;
+  if (characteristicUuid.startsWith('0x')) {
+    characteristicUuid = parseInt(characteristicUuid);
+  }
+
+  console.log('Requesting Bluetooth Device...');
+  navigator.bluetooth.requestDevice({filters: [{services: [serviceUuid]}]})
+  .then(device => {
+    console.log('Connecting to GATT Server...');
+    return device.gatt.connect();
+  })
+  .then(server => {
+    console.log('Getting Service...');
+    return server.getPrimaryService(serviceUuid);
+  })
+  .then(service => {
+    console.log('Getting Characteristics...');
+    if (characteristicUuid) {
+      // Get all characteristics that match this UUID.
+      return service.getCharacteristics(characteristicUuid);
+    }
+    // Get all characteristics.
+    return service.getCharacteristics();
+  })
+  .then(characteristics => {
+    console.log('> Characteristics: ' +
+      characteristics.map(c => c.uuid).join('\n' + ' '.repeat(19)));
+  })
+  .catch(error => {
+    console.log('Argh! ' + error);
+  });
+}
+function log(data, type = '') {
+  terminalContainer.insertAdjacentHTML('beforeend',
+      '<div' + (type ? ' class="' + type + '"' : '') + '>' + data + '</div>');
+}
+</script>
